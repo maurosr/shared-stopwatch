@@ -30,7 +30,7 @@ Mauro Schilman
 
 ### Code Documentation
 
-[godoc.org/github.com/maurosr/shared-stopwatch](http://godoc.org/github.com/maurosr/stopwatch)
+[godoc.org/github.com/maurosr/shared-stopwatch](http://godoc.org/github.com/maurosr/shared-stopwatch)
 
 ### Acknowledgement
 
