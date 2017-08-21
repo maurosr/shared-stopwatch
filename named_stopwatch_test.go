@@ -28,44 +28,75 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package stopwatch
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
 
-func TestNew(t *testing.T) {
-	s := NewStopwatch()
+func TestNewNamed(t *testing.T) {
+	s := NewNamedStopwatch()
 	if s == nil {
 		t.Errorf("Error: NewStopwatch() returned: %v, expected: non-nil value", s)
 	}
 }
 
-func TestStart(t *testing.T) {
-	s := NewStopwatch()
-	s.Start()
-	elapsed := s.Elapsed()
+func TestAddAndDeleteNamed(t *testing.T) {
+	s := NewNamedStopwatch()
+	names := []string{"s1", "s2", "s3"}
+
+	s.Add(names...)
+
+	for _, name := range names {
+		if !s.Exists(name) {
+			t.Errorf("Stopwatch %v was not added", name)
+		}
+	}
+
+	if !reflect.DeepEqual(s.Keys(), names) {
+		t.Errorf("Added %v, returned keys %v", names, s.Keys())
+	}
+
+	s.Delete(names[0])
+	if s.Exists(names[0]) {
+		t.Errorf("Stopwatch %v was not successfully deleted", names[0])
+	}
+}
+
+func TestStartNamed(t *testing.T) {
+	s := NewNamedStopwatch()
+	names := []string{"s1", "s2", "s3"}
+
+	s.Add(names...)
+
+	s.Start(names[0])
+	elapsed := s.Elapsed(names[0])
 	if elapsed <= time.Duration(0) {
 		t.Errorf("Error: Elapsed time returned: %v, expected: > 0", elapsed)
 	}
 }
 
-func TestElapsed(t *testing.T) {
-	s := NewStopwatch()
-	elapsed0 := s.Elapsed()
+func TestElapsedNamed(t *testing.T) {
+	s := NewNamedStopwatch()
+	names := []string{"s1", "s2", "s3"}
+
+	s.Add(names...)
+
+	elapsed0 := s.Elapsed(names[0])
 
 	if elapsed0 != time.Duration(0) {
 		t.Errorf("Error: Elapsed time returned: %v, expected: 0", elapsed0)
 	}
 
-	stopCallback := s.Start()
-	elapsed1 := s.Elapsed()
+	stopCallback := s.Start(names[0])
+	elapsed1 := s.Elapsed(names[0])
 
 	if elapsed1 <= time.Duration(0) {
 		t.Errorf("Error: Elapsed time returned: %v, expected: > 0", elapsed0)
 	}
 
 	stopCallback()
-	elapsed2 := s.Elapsed()
-	elapsed3 := s.Elapsed()
+	elapsed2 := s.Elapsed(names[0])
+	elapsed3 := s.Elapsed(names[0])
 
 	if elapsed2 < elapsed1 {
 		t.Errorf("Error: Elapsed time is not monotonically incresing: elapsed2(%v) <= elapsed1(%v)", elapsed2, elapsed1)
@@ -76,17 +107,21 @@ func TestElapsed(t *testing.T) {
 	}
 }
 
-func TestStop(t *testing.T) {
-	s := NewStopwatch()
-	stopCallback := s.Start()
+func TestStopNamed(t *testing.T) {
+	s := NewNamedStopwatch()
+	names := []string{"s1", "s2", "s3"}
+
+	s.Add(names...)
+
+	stopCallback := s.Start(names[0])
 	err := stopCallback()
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	elapsed1 := s.Elapsed()
-	elapsed2 := s.Elapsed()
+	elapsed1 := s.Elapsed(names[0])
+	elapsed2 := s.Elapsed(names[0])
 	if elapsed1 != elapsed2 {
 		t.Errorf("Error: Elapsed time continues increasing after stop: elapsed2(%v) != elapsed3(%v)", elapsed1, elapsed2)
 	}
@@ -98,15 +133,19 @@ func TestStop(t *testing.T) {
 	}
 }
 
-func TestConcurrency(t *testing.T) {
-	s := NewStopwatch()
+func TestConcurrencyNamed(t *testing.T) {
+	s := NewNamedStopwatch()
+	names := []string{"s1", "s2", "s3"}
+
+	s.Add(names...)
+
 	checkpoint := make(chan interface{})
 	end := make(chan interface{})
 
 	var elapsed1, elapsed2, elapsed3 time.Duration
 
 	go func(tt *testing.T) {
-		stopCallback1 := s.Start()
+		stopCallback1 := s.Start(names[0])
 		tt.Log("Routine 1 started stopwatch")
 
 		checkpoint <- struct{}{}
@@ -118,7 +157,7 @@ func TestConcurrency(t *testing.T) {
 		if err1 != nil {
 			tt.Errorf("Error: stopping in routine 1: %v", err1)
 		}
-		elapsed1 = s.Elapsed()
+		elapsed1 = s.Elapsed(names[0])
 		tt.Logf("Routine 1 elapsed time: %v", elapsed1)
 
 		checkpoint <- struct{}{}
@@ -127,7 +166,7 @@ func TestConcurrency(t *testing.T) {
 	go func(tt *testing.T) {
 		<-checkpoint
 
-		stopCallback2 := s.Start()
+		stopCallback2 := s.Start(names[0])
 		tt.Log("Routine 2 started stopwatch")
 
 		checkpoint <- struct{}{}
@@ -139,7 +178,7 @@ func TestConcurrency(t *testing.T) {
 		if err2 != nil {
 			tt.Errorf("Error: stopping in routine 2: %v", err2)
 		}
-		elapsed2 = s.Elapsed()
+		elapsed2 = s.Elapsed(names[0])
 		tt.Logf("Routine 2 elapsed time: %v", elapsed2)
 
 		if elapsed2 <= elapsed1 {
@@ -151,51 +190,59 @@ func TestConcurrency(t *testing.T) {
 
 	<-end
 
-	elapsed3 = s.Elapsed()
+	elapsed3 = s.Elapsed(names[0])
 	t.Logf("Final elapsed time: %v", elapsed3)
 	if elapsed2 != elapsed3 {
 		t.Errorf("Error: Stopwatch did not stop after all routines stop")
 	}
 }
 
-func TestReset(t *testing.T) {
-	s := NewStopwatch()
-	stopC := s.Start()
+func TestResetNamed(t *testing.T) {
+	s := NewNamedStopwatch()
+	names := []string{"s1", "s2", "s3"}
 
-	err := s.Reset()
+	s.Add(names...)
+
+	stopC := s.Start(names[0])
+
+	err := s.Reset(names[0])
 	if err.Error() != "Can't reset a stopwatch if it is running" {
 		t.Errorf("Error: wrong error returned when resetting a running stopwatch: '%v', expected: 'Can't reset a stopwatch if it is running'", err)
 	}
 
 	stopC()
-	err = s.Reset()
+	err = s.Reset(names[0])
 	if err != nil {
 		t.Errorf("Error: reset failed: %v", err)
 	}
-	elapsed := s.Elapsed()
+	elapsed := s.Elapsed(names[0])
 	if elapsed != time.Duration(0) {
 		t.Errorf("Error: elapsed time after reset %v, expected 0", elapsed)
 	}
 }
 
-func TestIsRunning(t *testing.T) {
-	s := NewStopwatch()
-	if s.IsRunning() {
+func TestIsRunningNamed(t *testing.T) {
+	s := NewNamedStopwatch()
+	names := []string{"s1", "s2", "s3"}
+
+	s.Add(names...)
+
+	if s.IsRunning(names[0]) {
 		t.Errorf("Error: Stopwatch running before started")
 	}
-	stopC := s.Start()
-	if !s.IsRunning() {
+	stopC := s.Start(names[0])
+	if !s.IsRunning(names[0]) {
 		t.Errorf("Error: Stopwatch not running after started")
 	}
 
-	stopC2 := s.Start()
+	stopC2 := s.Start(names[0])
 
 	stopC()
-	if !s.IsRunning() {
+	if !s.IsRunning(names[0]) {
 		t.Errorf("Error: Stopwatch stopped before all stop callbacks executed")
 	}
 	stopC2()
-	if s.IsRunning() {
+	if s.IsRunning(names[0]) {
 		t.Errorf("Error: Stopwatch did not stop after all stop callbacks executed")
 	}
 }

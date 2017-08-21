@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017, Mauro Schilman
+Copyright (c) 2017, Mauro Schilman, courtesy Booking.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
