@@ -63,18 +63,21 @@ func (s *Stopwatch) Start() func() error {
 	s.Lock()
 	defer s.Unlock()
 
-	if !s.isRunning() {
-		s.startTime = time.Now()
-	}
+	wasRunning := s.isRunning()
 
 	s.running[s.runCount] = struct{}{}
 	s.runCount++
+
+	if !wasRunning {
+		s.startTime = time.Now()
+	}
 
 	return stopCallback(s, s.runCount-1)
 }
 
 func stopCallback(s *Stopwatch, idx uint) func() error {
 	return func() error {
+		var elapsedTime time.Duration = time.Since(s.startTime)
 		var err error = nil
 		s.Lock()
 		defer s.Unlock()
@@ -83,7 +86,7 @@ func stopCallback(s *Stopwatch, idx uint) func() error {
 			delete(s.running, idx)
 
 			if !s.isRunning() {
-				s.elapsedTime += time.Since(s.startTime)
+				s.elapsedTime += elapsedTime
 				s.startTime = time.Time{}
 			}
 		} else {

@@ -28,7 +28,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package stopwatch
 
 import (
-	"reflect"
 	"testing"
 	"time"
 )
@@ -50,10 +49,6 @@ func TestAddAndDeleteNamed(t *testing.T) {
 		if !s.Exists(name) {
 			t.Errorf("Stopwatch %v was not added", name)
 		}
-	}
-
-	if !reflect.DeepEqual(s.Keys(), names) {
-		t.Errorf("Added %v, returned keys %v", names, s.Keys())
 	}
 
 	s.Delete(names[0])
